@@ -11,6 +11,7 @@ def dice_loss(y_true, y_pred):
     return 1. - dice_coef(y_true, y_pred)
 
 def jaccard_coef(y_true, y_pred):
+    smooth = 1.
     # __author__ = Vladimir Iglovikov
     intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
     sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
