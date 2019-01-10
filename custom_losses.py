@@ -7,6 +7,15 @@ def dice_coef(y_true, y_pred):
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
+def dice_coef2(y_true, y_pred):
+    smooth = 1.
+    intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+
+    dice = (2. * intersection + smooth) / (sum_ + smooth)
+
+    return dice
+
 def dice_loss(y_true, y_pred):
     return 1. - dice_coef(y_true, y_pred)
 
