@@ -81,7 +81,7 @@ class SegDataGenerator(Sequence):
                 self._masks.append(mask)
 
     def __len__(self):
-        return int(np.ceil(len(self._in_files / float(self._batch_size))))
+        return int(np.ceil(len(self._in_files) / float(self._batch_size)))
     
     def __getitem__(self, idx):
         h = 0
