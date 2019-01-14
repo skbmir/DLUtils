@@ -104,8 +104,8 @@ class SegDataGenerator(Sequence):
                 batch_mask = cv2.resize(self._masks[i], dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
 
                 batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
-                batch_x[i] = batch_img
-                batch_y[i] = batch_mask
+                batch_x[i] = batch_img.astype('float32')
+                batch_y[i] = batch_mask.astype('float32')
 
         else:
 
@@ -121,8 +121,8 @@ class SegDataGenerator(Sequence):
                 batch_mask = cv2.resize(mask, dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
 
                 batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
-                batch_x[i] = batch_img
-                batch_y[i] = batch_mask
+                batch_x[i] = batch_img.astype('float32')
+                batch_y[i] = batch_mask.astype('float32')
 
         return batch_x, batch_y
 
