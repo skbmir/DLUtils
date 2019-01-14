@@ -111,14 +111,14 @@ class SegDataGenerator(Sequence):
 
             for i, name in enumerate(self._in_files[idx*self._batch_size:(idx+1)*self._batch_size]):
 
-                batch_img = cv2.imread(self._dir + name, cv2.IMREAD_UNCHANGED)
-                batch_mask = cv2.imread(self._mask_dir + self._mask_files, cv2.IMREAD_UNCHANGED)
+                img = cv2.imread(self._dir + name, cv2.IMREAD_UNCHANGED)
+                mask = cv2.imread(self._mask_dir + self._mask_files, cv2.IMREAD_UNCHANGED)
 
                 if (img.shape[w] < self._in_shape[w]) or (img.shape[h] < self._in_shape[h]):
                     inter = cv2.INTER_CUBIC
                 
-                batch_img = cv2.resize(batch_img, dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
-                batch_mask = cv2.resize(batch_mask, dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
+                batch_img = cv2.resize(img, dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
+                batch_mask = cv2.resize(mask, dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
 
                 batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
                 batch_x[i] = batch_img
