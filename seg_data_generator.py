@@ -112,7 +112,7 @@ class SegDataGenerator(Sequence):
             for i, name in enumerate(self._in_files[idx*self._batch_size:(idx+1)*self._batch_size]):
 
                 img = cv2.imread(self._dir + name, cv2.IMREAD_UNCHANGED)
-                mask = cv2.imread(self._mask_dir + self._mask_files, cv2.IMREAD_UNCHANGED)
+                mask = cv2.imread(self._mask_dir + self._mask_files[i], cv2.IMREAD_UNCHANGED)
 
                 if (img.shape[w] < self._in_shape[w]) or (img.shape[h] < self._in_shape[h]):
                     inter = cv2.INTER_CUBIC

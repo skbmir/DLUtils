@@ -62,6 +62,9 @@ def GCN(input_shape=(512, 512, 3),
         padding='same',
         k=15):
 
+    if binary_segmentation:
+        num_classes = 1
+
     if gc_br_filters == -1:
         gc_br_filters = num_classes + 1
 
@@ -133,7 +136,7 @@ def GCN(input_shape=(512, 512, 3),
     deconv_res2_br = BoundaryRefinement(filters=gc_br_filters, padding=padding)(deconv_res2)
 
     deconv_out = deconv_out(deconv_res2_br)
-    br_out = BoundaryRefinement(filters=num_classes, padding=padding)(deconv_out)
+    br_out = BoundaryRefinement(filters=gc_br_filters, padding=padding)(deconv_out)
 
     out = None
 
