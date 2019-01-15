@@ -1,4 +1,5 @@
 import os
+import random
 import numpy as np
 import cv2
 from keras.utils import Sequence
@@ -57,10 +58,18 @@ class SegDataGenerator(Sequence):
         self._fext = input_extention
         self._mext = mask_extention
         self._batch_size = batch_size
-        self._in_files = list(filter(lambda x: x.endswith(self._fext), os.listdir(self._dir)))
-        self._in_files.sort()
-        self._mask_files = list(filter(lambda x: x.endswith(self._mext), os.listdir(self._mask_dir)))
-        self._mask_files.sort()
+
+        in_files = list(filter(lambda x: x.endswith(self._fext), os.listdir(self._dir)))
+        in_files.sort()
+        mask_files = list(filter(lambda x: x.endswith(self._mext), os.listdir(self._mask_dir)))
+        mask_files.sort()
+
+        self._files = list()
+        for i, name in enumerate(in_files):
+            self._files.append((name, mask_files[i]))
+
+        random.shuffle(self._files)
+
         self._preload = preload_dataset
         self._prob_aug = prob_aug
         self._data = None
@@ -73,12 +82,10 @@ class SegDataGenerator(Sequence):
 
         if self._preload:
             self._data = list()
-            self._masks = list()
-            for i, name in enumerate(self._in_files):
-                img = cv2.imread(self._dir + name, cv2.IMREAD_UNCHANGED)
-                mask = cv2.imread(self._mask_dir + self._mask_files[i], cv2.IMREAD_UNCHANGED)
-                self._data.append(img)
-                self._masks.append(mask)
+            for i, names in enumerate(self._files):
+                img = cv2.imread(os.path.join(self._dir, names[0]), cv2.IMREAD_UNCHANGED)
+                mask = cv2.imread(os.path.join(self._mask_dir, names[1]), cv2.IMREAD_UNCHANGED)
+                self._data.append((img, mask))
 
     def __len__(self):
         return int(np.ceil(len(self._in_files) / float(self._batch_size)))
@@ -95,13 +102,13 @@ class SegDataGenerator(Sequence):
 
         if self._preload:
             
-            for i, img in enumerate(self._data[idx*self._batch_size:(idx+1)*self._batch_size]):
+            for i, imgs in enumerate(self._data[idx*self._batch_size:(idx+1)*self._batch_size]):
 
-                if (img.shape[w] < self._in_shape[w]) or (img.shape[h] < self._in_shape[h]):
+                if (imgs[0].shape[w] < self._in_shape[w]) or (imgs[0].shape[h] < self._in_shape[h]):
                     inter = cv2.INTER_CUBIC
 
-                batch_img = cv2.resize(img, dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
-                batch_mask = cv2.resize(self._masks[i], dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
+                batch_img = cv2.resize(imgs[0], dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
+                batch_mask = cv2.resize(imgs[1], dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
 
                 batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
                 batch_x[i] = batch_img.astype('float32')
@@ -109,10 +116,10 @@ class SegDataGenerator(Sequence):
 
         else:
 
-            for i, name in enumerate(self._in_files[idx*self._batch_size:(idx+1)*self._batch_size]):
+            for i, names in enumerate(self._files[idx*self._batch_size:(idx+1)*self._batch_size]):
 
-                img = cv2.imread(self._dir + name, cv2.IMREAD_UNCHANGED)
-                mask = cv2.imread(self._mask_dir + self._mask_files[i], cv2.IMREAD_UNCHANGED)
+                img = cv2.imread(os.path.join(self._dir, names[0]), cv2.IMREAD_UNCHANGED)
+                mask = cv2.imread(os.path.join(self._mask_dir, names[1]), cv2.IMREAD_UNCHANGED)
 
                 if (img.shape[w] < self._in_shape[w]) or (img.shape[h] < self._in_shape[h]):
                     inter = cv2.INTER_CUBIC
