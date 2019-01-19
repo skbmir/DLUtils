@@ -3,6 +3,8 @@ import random
 import numpy as np
 import cv2
 from keras.utils import Sequence
+
+
 # This vvvvv is for example_preprocess function and augs
 # from albumentations import (
 #     HorizontalFlip, VerticalFlip, Flip, Transpose, Rotate, ShiftScaleRotate, RandomScale,
@@ -44,12 +46,12 @@ class SegDataGenerator(Sequence):
         no public attributes
     '''
 
-    def __init__(self, 
-                 input_directory, mask_directory, 
-                 input_extention='.jpg', mask_extention='.png', 
-                 input_shape=(256, 256, 3), mask_shape=(256, 256, 1), 
-                 batch_size=4, preload_dataset=False, prob_aug=0.5, 
-                 preprocessing_function=None):
+    def __init__(self,
+                 input_directory, mask_directory,
+                 input_extention='.jpg', mask_extention='.png',
+                 input_shape=(256, 256, 3), mask_shape=(256, 256, 1),
+                 batch_size=4, preload_dataset=False, prob_aug=0.5,
+                 preprocessing_function=None, classes=1, classes_colors=None):
 
         self._dir = input_directory
         self._mask_dir = mask_directory
@@ -75,6 +77,12 @@ class SegDataGenerator(Sequence):
         self._data = None
         self._masks = None
 
+        self._h = 0
+        self._w = 1
+        self._c = 2
+        self._classes = classes
+        self._colors = classes_colors
+
         if (preprocessing_function is not None) and callable(preprocessing_function):
             self._preprocess = preprocessing_function
         else:
@@ -88,52 +96,61 @@ class SegDataGenerator(Sequence):
                 self._data.append((img, mask))
 
     def __len__(self):
-        return int(np.ceil(len(self._in_files) / float(self._batch_size)))
-    
+        return int(np.ceil(len(self._files) / float(self._batch_size)))
+
     def __getitem__(self, idx):
-        h = 0
-        w = 1
-        c = 2
 
-        batch_x = np.empty((self._batch_size, self._in_shape[h], self._in_shape[w], self._in_shape[c]), dtype='float32')
-        batch_y = np.empty((self._batch_size, self._mask_shape[h], self._mask_shape[w], self._mask_shape[c]), dtype='float32')
-
-        inter = cv2.INTER_AREA
+        batch_x = np.empty(
+            (self._batch_size, self._in_shape[self._h], self._in_shape[self._w], self._in_shape[self._c]),
+            dtype='float32')
+        batch_y = np.empty((self._batch_size, self._mask_shape[self._h], self._mask_shape[self._w], self._classes),
+                           dtype='float32')
 
         if self._preload:
-            
-            for i, imgs in enumerate(self._data[idx*self._batch_size:(idx+1)*self._batch_size]):
 
-                if (imgs[0].shape[w] < self._in_shape[w]) or (imgs[0].shape[h] < self._in_shape[h]):
-                    inter = cv2.INTER_CUBIC
-
-                batch_img = cv2.resize(imgs[0], dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
-                batch_mask = cv2.resize(imgs[1], dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
-
-                batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
-                batch_x[i] = batch_img.astype('float32')
-                batch_y[i] = batch_mask.astype('float32')
+            for i, imgs in enumerate(self._data[idx * self._batch_size:(idx + 1) * self._batch_size]):
+                batch_img, batch_mask = self.__filter__(imgs[0], imgs[1])
+                batch_x[i] = batch_img
+                batch_y[i] = batch_mask
 
         else:
 
-            for i, names in enumerate(self._files[idx*self._batch_size:(idx+1)*self._batch_size]):
-
+            for i, names in enumerate(self._files[idx * self._batch_size:(idx + 1) * self._batch_size]):
                 img = cv2.imread(os.path.join(self._dir, names[0]), cv2.IMREAD_UNCHANGED)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 mask = cv2.imread(os.path.join(self._mask_dir, names[1]), cv2.IMREAD_UNCHANGED)
+                mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
 
-                if (img.shape[w] < self._in_shape[w]) or (img.shape[h] < self._in_shape[h]):
-                    inter = cv2.INTER_CUBIC
-                
-                batch_img = cv2.resize(img, dsize=(self._in_shape[w], self._in_shape[h]), interpolation=inter)
-                batch_mask = cv2.resize(mask, dsize=(self._mask_shape[w], self._mask_shape[h]), interpolation=inter)
-
-                batch_img, batch_mask = self._preprocess(batch_img, batch_mask, self._prob_aug)
-                batch_x[i] = batch_img.astype('float32')
-                batch_y[i] = batch_mask.astype('float32')
+                batch_img, batch_mask = self.__filter__(img, mask)
+                batch_x[i] = batch_img
+                batch_y[i] = batch_mask
 
         return batch_x, batch_y
 
-    @staticmethod  
+    def __filter__(self, img, mask):
+        inter = cv2.INTER_AREA
+
+        if (img.shape[self._w] < self._in_shape[self._w]) or (img.shape[self._h] < self._in_shape[self._h]):
+            inter = cv2.INTER_CUBIC
+
+        batch_img = cv2.resize(img, dsize=(self._in_shape[self._w], self._in_shape[self._h]), interpolation=inter)
+        batch_mask = cv2.resize(mask, dsize=(self._mask_shape[self._w], self._mask_shape[self._h]),
+                                interpolation=inter)
+
+        batch_img_a, batch_mask_a = self._preprocess(batch_img, batch_mask, self._prob_aug)
+
+        if self._classes > 1:
+            dashed_mask = np.empty((self._mask_shape[self._h], self._mask_shape[self._w], self._classes),
+                                   dtype='float32')
+
+            for color in self._colors:
+                one_mask = cv2.inRange(batch_mask_a, np.asarray(self._colors[color]), np.asarray(self._colors[color]))
+                np.append(dashed_mask, one_mask.astype('float32'))
+            return batch_img_a.astype('float32'), dashed_mask
+        else:
+            return batch_img_a.astype('float32'), batch_mask_a.astype('float32')
+
+    @staticmethod
     def _def_preprocess(img, mask, prob_aug):
         ''' Default preprocessing and augmentation function for SegDataGenerator class
 
@@ -183,7 +200,7 @@ class SegDataGenerator(Sequence):
 #         mask (numpy.ndarray): mask as numpy array (loaded using opencv, skimage or other compatible modules)
 
 #         prob_aug (float): probability of getting augmented image (if used)
-    
+
 #     Returns:
 #         tuple: tuple of preprocessed (image, mask)
 #     '''
