@@ -51,7 +51,7 @@ class SegDataGenerator(Sequence):
                  input_extention='.jpg', mask_extention='.png',
                  input_shape=(256, 256, 3), mask_shape=(256, 256, 1),
                  batch_size=4, preload_dataset=False, prob_aug=0.5,
-                 preprocessing_function=None, classes=1, classes_colors=None):
+                 preprocessing_function=None, classes_colors=None):
 
         self._dir = input_directory
         self._mask_dir = mask_directory
@@ -80,7 +80,6 @@ class SegDataGenerator(Sequence):
         self._h = 0
         self._w = 1
         self._c = 2
-        self._classes = classes
         self._colors = classes_colors
 
         if (preprocessing_function is not None) and callable(preprocessing_function):
@@ -103,8 +102,9 @@ class SegDataGenerator(Sequence):
         batch_x = np.empty(
             (self._batch_size, self._in_shape[self._h], self._in_shape[self._w], self._in_shape[self._c]),
             dtype='float32')
-        batch_y = np.empty((self._batch_size, self._mask_shape[self._h], self._mask_shape[self._w], self._classes),
-                           dtype='float32')
+        batch_y = np.empty(
+            (self._batch_size, self._mask_shape[self._h], self._mask_shape[self._w], self._mask_shape[self._c]),
+            dtype='float32')
 
         if self._preload:
 
@@ -139,8 +139,8 @@ class SegDataGenerator(Sequence):
 
         batch_img_a, batch_mask_a = self._preprocess(batch_img, batch_mask, self._prob_aug)
 
-        if self._classes > 1:
-            dashed_mask = np.empty((self._mask_shape[self._h], self._mask_shape[self._w], self._classes),
+        if self._mask_shape[self._c] > 1:
+            dashed_mask = np.empty((self._mask_shape[self._h], self._mask_shape[self._w], self._mask_shape[self._c]),
                                    dtype='float32')
 
             for color in self._colors:
