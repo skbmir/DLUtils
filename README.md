@@ -1,2 +1,2 @@
 # DLUtils
-Deel Learning Utility Modules
+Deep Learning Utility Modules
